@@ -1,11 +1,17 @@
 
 package MetodoLiu;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.TypeVariable;
+import java.util.Scanner;
+
+import org.apache.bcel.Repository;
+import org.apache.bcel.classfile.JavaClass;
 
 /**
  * Leitor
@@ -25,48 +31,47 @@ public class Leitor {
 		}
 	}
 
-	public Class<?> classe(){
+	public Class<?> classe() {
 		return caller;
 	}
 
 	/** 
 	 * retorna os campos da classe
 	 */
-	public Field[] campos(){
+	public Field[] campos() {
 		try {
 			return caller.getDeclaredFields();
 		} catch (Exception ex) {
 			System.out.println("Não conseguiu achar o construtor");
 			return null;
-		}		
+		}
 	}
 
 	/** 
 	 * retorna os construtores da classe
 	 */
-	public Constructor<?>[] construtor(){
+	public Constructor<?>[] construtor() {
 		try {
 			Constructor<?>[] constructors = caller.getConstructors();
 			return constructors;
 		} catch (Exception ex) {
 			System.out.println("Não conseguiu achar o construtor");
 			return null;
-		}		
+		}
 	}
-
 
 	/** 
 	 * retorna os construtores da classe
 	 */
-	public Constructor<?>[] construtoresDeclarados(){
+	public Constructor<?>[] construtoresDeclarados() {
 		try {
 			Constructor<?>[] constructors = caller.getDeclaredConstructors();
 			return constructors;
 		} catch (Exception ex) {
 			System.out.println("Não conseguiu achar o construtor");
 			return null;
-		}		
-	}	
+		}
+	}
 
 	/** retorna os métodos da classe */
 	public Method[] metodos() {
@@ -128,4 +133,14 @@ public class Leitor {
 		return res;
 	}
 
+
+	public  org.apache.bcel.classfile.Method metodoBcel(Method metodo){
+		try{
+			JavaClass classeInstanciada = Repository.lookupClass(this.nomeClasse);
+			return classeInstanciada.getMethod(metodo);
+			
+		}catch(ClassNotFoundException ex){
+			return null;
+		}
+	}
 }
