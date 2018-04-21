@@ -1,9 +1,14 @@
 package MetodoLiu;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.List;
 
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
 
@@ -38,12 +43,12 @@ public class Strategy {
                         if (var instanceof IfStmt) {
                             IfStmt ifStmt = (IfStmt) var;
                             String condicional = l.temParametroNoIf(parametrosMetodo, ifStmt.getCondition().toString());
-                            
-                            if(!condicional.isEmpty()){
+
+                            if (!condicional.isEmpty()) {
                                 return condicional;
-                            }else{
+                            } else {
                                 break;
-                            }    
+                            }
                         }
                     }
                 }
@@ -53,5 +58,64 @@ public class Strategy {
         return null;
     }
 
+    /**
+     * le um arquivo .java transforma ele e adiciona coisas ao método e por fim reescreve ele perante o arquivo
+     * @param caminhoArquivoJava - url do arquivo .java
+     * @exception ex não ache o arquivo
+     */
+    public void modificaClasse(String caminhoArquivoJava) {
+        try {
+            FileInputStream file = new FileInputStream(caminhoArquivoJava);
+            CompilationUnit cu = JavaParser.parse(file);
 
+            /** fazer as modificações na classe */
+
+            /** alterando arquivo .java */
+            FileWriter fileWriter = new FileWriter(caminhoArquivoJava);
+            fileWriter.write(cu.toString());
+            fileWriter.flush();
+            fileWriter.close();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+   
+    
+    /**
+     *  responsável por criar o arquivo e colocar conteúdo da classe abstrata 
+     *  
+     * */
+    public void criaClasseAbstrata(String caminho) {
+        try {
+            
+            /**pega o modelo da classe para ser trocado o texto com replace e ser criado a nova classe Strategy*/
+        	String texto = "";
+    		File file = new File(getClass().getResource("ModeloStrategy.txt").getPath());
+    		try (FileInputStream inputStream = new FileInputStream(file)) {
+    			
+    			int content;
+    			while ((content = inputStream.read()) != -1) {
+    				// convert to char and display it
+    				texto += (char) content;
+    			}
+    			inputStream.close();
+    			texto = texto.replace("[pacote]", "");
+    			texto = texto.replace("[parametro1]", "");
+    			
+    		} catch (Exception ex) {
+    			throw new IllegalStateException("Erro causado por: " + ex.getMessage());
+    		}finally {
+    			
+			}
+    		
+    		/** com modelo pego ele escreve o arquivo*/
+    		FileWriter arquivo = new FileWriter(caminho + "/Strategy.java");
+            arquivo.write(texto);
+            arquivo.close();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Erro causado por: " + ex.getMessage());
+        }
+    }
 }

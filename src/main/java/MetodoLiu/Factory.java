@@ -1,5 +1,8 @@
 package MetodoLiu;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -53,5 +56,42 @@ public class Factory {
             }
         }
     }
+    
+    
+    /**
+     *  responsável por criar o arquivo e colocar conteúdo da classe abstrata 
+     *  
+     * */
+    public void criaClasseConcreta(String caminho) {
+        try {
+            
+            /**pega o modelo da classe para ser trocado o texto com replace e ser criado a nova classe Strategy*/
+        	String texto = "";
+    		File file = new File(getClass().getResource("ModeloFactory.txt").getPath());
+    		try (FileInputStream inputStream = new FileInputStream(file)) {
+    			
+    			int content;
+    			while ((content = inputStream.read()) != -1) {
+    				// convert to char and display it
+    				texto += (char) content;
+    			}
+    			inputStream.close();
+    			texto = texto.replace("[pacote]", "");
+    			texto = texto.replace("[parametro1]", "");
+    			
+    		} catch (Exception ex) {
+    			throw new IllegalStateException("Erro causado por: " + ex.getMessage());
+    		}finally {
+    			
+			}
+    		
+    		/** com modelo pego ele escreve o arquivo*/
+    		FileWriter arquivo = new FileWriter(caminho + "/Factory.java");
+            arquivo.write(texto);
+            arquivo.close();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Erro causado por: " + ex.getMessage());
+        }
+    }    
 
 }

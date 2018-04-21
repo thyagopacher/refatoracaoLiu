@@ -52,28 +52,5 @@ public class Refatoracao {
     }
 
 
-    /**
-     * le um arquivo .java transforma ele e adiciona coisas ao método e por fim reescreve ele perante o arquivo
-     * @param caminhoArquivoJava - url do arquivo .java
-     * @exception ex não ache o arquivo
-     */
-    public void modificaClasse(String caminhoArquivoJava) {
-        try {
-            String camArquivo = "C:\\other_classes\\com\\mkyong\\io\\Address.java";
-            FileInputStream file = new FileInputStream(camArquivo);
-            CompilationUnit cu = JavaParser.parse(file);
-            // change the methods names and parameters
-            //changeMethods(cu);
-            // prints the changed compilation unit
-            
-            /** alterando arquivo .java */
-            FileWriter fileWriter = new FileWriter(camArquivo);
-            fileWriter.write(cu.toString());
-            fileWriter.flush();
-            fileWriter.close();
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }    
+    
 }
