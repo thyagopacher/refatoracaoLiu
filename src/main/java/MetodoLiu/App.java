@@ -13,10 +13,34 @@ import org.apache.bcel.generic.Type;
 import org.apache.bcel.util.ByteSequence;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
+import com.github.javaparser.ast.stmt.BlockStmt;
+import com.github.javaparser.ast.stmt.ForStmt;
+import com.github.javaparser.ast.stmt.IfStmt;
+import com.github.javaparser.ast.stmt.ReturnStmt;
+import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.TypeParameter;
+import com.github.javaparser.ast.visitor.GenericVisitor;
+import com.github.javaparser.ast.visitor.VoidVisitor;
+import com.github.javaparser.resolution.types.ResolvedType;
 
 /**
  * Classe para testar a refatoração com métodos reflexivos
@@ -191,11 +215,88 @@ public class App {
 
     public void verificarProjetoExemplo() {
         Refatoracao rf = new Refatoracao();
-        rf.lerProjeto("D:/Java/Padr-es-de-Projeto-master");
+        rf.lerProjeto("C:\\programa-java\\Padr-es-de-Projeto-master\\src\\br\\padroes");
+    }
+
+    /**
+     *  le um arquivo .java transforma ele e adiciona coisas ao método e por fim reescreve ele perante o arquivo
+     * @exception ex não ache o arquivo
+     */
+    public void modificaClasse() {
+        try {
+            String camArquivo = "C:\\other_classes\\com\\mkyong\\io\\Address.java";
+            FileInputStream file = new FileInputStream(camArquivo);
+            CompilationUnit cu = JavaParser.parse(file);
+            // change the methods names and parameters
+            changeMethods(cu);
+            // prints the changed compilation unit
+            System.out.println(cu.toString());
+            FileWriter fileWriter = new FileWriter(camArquivo);
+            fileWriter.write(cu.toString());
+            fileWriter.flush();
+            fileWriter.close();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private static void changeMethods(CompilationUnit cu) {
+        // Go through all the types in the file
+        NodeList<TypeDeclaration<?>> types = cu.getTypes();
+        for (TypeDeclaration<?> type : types) {
+            // Go through all fields, methods, etc. in this type
+            NodeList<BodyDeclaration<?>> members = type.getMembers();
+            for (BodyDeclaration<?> member : members) {
+                if (member instanceof MethodDeclaration) {
+                    MethodDeclaration method = (MethodDeclaration) member;
+                    changeMethod(method);
+                }
+            }
+        }
+    }
+
+    private static void changeMethod(MethodDeclaration n) {
+        // change the name of the method to upper case
+        n.setName(n.getNameAsString().toLowerCase());
+
+        /** cria comentários */
+        n.setBlockComment("Método refatorado automaticamente");
+
+        BlockStmt block = n.getBody().get();
+        System.out.println("Tem corpo: " + block.toBlockStmt().isPresent());
+        // List linhas = new Leitor().linhasMetodo(n.getName(), "Address");
+        // for(int i = 0; i < linhas.size(); i++){
+        //     if(linhas.get(i) instanceof IfStmt){
+        //         IfStmt ifStmt = (IfStmt) linhas.get(i);
+        //         System.out.println("É um IF - com condição: " + ifStmt.getCondition() + " - corpo do IF:" + ifStmt.getThenStmt() + " tem else:  " + ifStmt.hasElseBlock());
+        //     }
+        //     if(linhas.get(i) instanceof ForStmt){
+        //         ForStmt forStmt = (ForStmt) linhas.get(i);
+                
+        //         System.out.println("É um FOR: inicializador - " + forStmt.getInitialization() + " - Comparador: " + forStmt.getCompare() + " - Incrementador: " + forStmt.getUpdate());
+        //     }            
+        //     System.out.println(linhas.get(i));
+        // }
+        // System.out.println(block.toIfStmt().isPresent());
+        //block.addAndGetStatement("String teste");
+        n.setBody(block);
+
+        //só pode setar um parametro caso ele exista, senão ignora aqui.
+        if (n.getParameters().size() > 0) {
+            n.setParameter(0, new com.github.javaparser.ast.body.Parameter(new TypeParameter("int"), "valor1"));
+        }else{
+            //caso não tenha parametros ele adiciona um do tipo int 
+            n.addParameter(int.class, "valor1");
+        }
+
+        // troca tipo para final
+        n.setFinal(true);
     }
 
     public static void main(String[] args) {
         App app = new App();
+        //app.modificaClasse();
         // app.carregaClasseOutraURL();
         //app.verificarClasseExemplo();
         app.verificarProjetoExemplo();

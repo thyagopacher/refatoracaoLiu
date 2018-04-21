@@ -16,6 +16,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.stmt.Statement;
+import java.lang.reflect.Parameter;
 import org.apache.bcel.Repository;
 import org.apache.bcel.classfile.Code;
 import org.apache.bcel.classfile.JavaClass;
@@ -35,9 +43,15 @@ public class Leitor {
 	private Class<?> caller;
 	private JavaClass classeInstanciada = null;
 	private String tipoClasse;
+	private String caminhoClasse;
+	private File arquivoClasse;
+	public Leitor(){
+		
+	}
 
 	public Leitor(String nomeClasse, String caminho) {
 		try {
+			this.caminhoClasse = caminho;
 			/**le e nós define o nome do pacote - essencial para Class.forName  */
 			BufferedReader br = new BufferedReader(new FileReader(caminho));
 			while (br.ready()) {
@@ -61,6 +75,9 @@ public class Leitor {
 					String separadorTipo[] = separa_linhaModificador[1].trim().split(" ");
 					this.tipoClasse = separadorTipo[0];//pegando aqui o tipo se é interface, abstract, ou class
 					break;
+				}else if(linha.contains("interface")){
+					this.tipoClasse = "interface";
+					break;
 				}
 			}
 
@@ -81,21 +98,25 @@ public class Leitor {
 			String separa_caminho[] = caminho.split("src");
 			//começando a procura na pasta target padrão para IDE Visual Studio Code
 			String caminhoClasse = separa_caminho[0] + "target\\classes\\";
-			File file = new File(caminhoClasse);
-			if (!file.exists()) {//caso a pasta não exista então procura na build  - padrão para IDE netbeans e eclipse
-				file = new File(separa_caminho[0] + "build\\classes\\");
-				if (!file.exists()) {//caso a pasta não exista então procura na bin
-					file = new File(separa_caminho[0] + "bin\\");
+			arquivoClasse = new File(caminhoClasse);
+			if (!arquivoClasse.exists()) {//caso a pasta não exista então procura na build  - padrão para IDE netbeans e eclipse
+				arquivoClasse = new File(separa_caminho[0] + "build\\classes\\");
+				if (!arquivoClasse.exists()) {//caso a pasta não exista então procura na bin
+					arquivoClasse = new File(separa_caminho[0] + "bin\\");
 				}
 			}
 			//convert the file to URL format
-			URL url = file.toURI().toURL();
+			URL url = arquivoClasse.toURI().toURL();
 			URL[] urls = new URL[] { url };
 			//load this folder into Class loader
 			ClassLoader cl = new URLClassLoader(urls);
 			//load the Address class in 'c:\\other_classes\\'
 			String classeCarregada = this.pacoteClasse + "." + this.nomeClasse;
 			this.caller = cl.loadClass(classeCarregada);
+			if (this.classeInstanciada == null) {
+				this.classeInstanciada = Repository.lookupClass(caller);
+			}
+
 			//print the location from where this class was loaded
 			ProtectionDomain pDomain = this.caller.getProtectionDomain();
 			CodeSource cSource = pDomain.getCodeSource();
@@ -209,11 +230,8 @@ public class Leitor {
 
 	public org.apache.bcel.classfile.Method metodoBcel(Method metodo) {
 		try {
-			if (classeInstanciada == null) {
-				classeInstanciada = Repository.lookupClass(caller);
-			}
 			return classeInstanciada.getMethod(metodo);
-		} catch (ClassNotFoundException ex) {
+		} catch (Exception ex) {
 			throw new IllegalStateException("Erro causado por: " + ex.getMessage());
 		}
 	}
@@ -255,7 +273,7 @@ public class Leitor {
 	 */
 	public List<String> retornaIf(List<String> instrucoes) {
 		List<String> resultado = instrucoes.stream()
-				.filter(line -> line.equals("ifnonnull") || line.equals("ifeq") || line.equals("ifnull"))
+				.filter(line -> line.equals("ifnonnull") || line.equals("ifeq") || line.equals("ifnull") || line.equals("ifle"))
 				.collect(Collectors.toList());
 		return resultado;
 	}
@@ -296,5 +314,67 @@ public class Leitor {
 	 */
 	public void setTipoClasse(String tipoClasse) {
 		this.tipoClasse = tipoClasse;
+	}
+
+	/**
+	 * retorna as linhas do método de maneira legivel 
+	 */
+	public List<Statement> linhasMetodo(String nomeMetodo) {
+		try {
+			this.arquivoClasse = new File(this.caminhoClasse);
+			CompilationUnit cu = JavaParser.parse(arquivoClasse);
+			// Go through all the types in the file
+			NodeList<TypeDeclaration<?>> types = cu.getTypes();
+			for (TypeDeclaration<?> type : types) {
+				// Go through all fields, methods, etc. in this type
+				NodeList<BodyDeclaration<?>> members = type.getMembers();
+				for (BodyDeclaration<?> member : members) {
+					if (member instanceof MethodDeclaration) {
+						MethodDeclaration method = (MethodDeclaration) member;
+						String nomeMetodoLocal = method.getName().toString();
+						if (nomeMetodoLocal.equals(nomeMetodo)) {
+						
+							List<Statement> retorno = method.getBody().get().getStatements();
+							if(retorno != null && !retorno.isEmpty()){
+								return method.getBody().get().getStatements();
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception ex) {
+			throw new IllegalStateException("Erro ao pegar linhas: " + ex.getMessage());
+		}
+		return null;
+	}
+
+	/**
+	 * @return the caminhoClasse
+	 */
+	public String getCaminhoClasse() {
+		return caminhoClasse;
+	}
+
+	/**
+	 * @param caminhoClasse the caminhoClasse to set
+	 */
+	public void setCaminhoClasse(String caminhoClasse) {
+		this.caminhoClasse = caminhoClasse;
+	}
+
+	/**
+	 *  verifica se tem parametros no condicional IF
+	 * @param parametrosMetodo - os parametros do método
+	 * @param condicional - condicional perante o IF
+	 * @return retorna o condicional cujo houver parametro sendo usado nele.
+	 */
+	public String temParametroNoIf(java.lang.reflect.Parameter[] parametrosMetodo, String condicional){
+		for (Parameter parametro : parametrosMetodo) {
+			if(condicional.contains(parametro.getName().toString())){
+				/** achou um parametro sendo usado no condicional */
+				return condicional;
+			}
+		}
+		return null;		
 	}
 }
