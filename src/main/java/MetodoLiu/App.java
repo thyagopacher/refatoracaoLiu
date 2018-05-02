@@ -215,7 +215,7 @@ public class App {
 
     public void verificarProjetoExemplo() {
         Refatoracao rf = new Refatoracao();
-        rf.lerProjeto("C:\\programa-java\\Padr-es-de-Projeto-master\\src\\br\\padroes");
+        rf.lerProjeto("C:\\programa-java\\exemplo-cavado-Liu-factory");
     }
 
     /**
@@ -229,6 +229,7 @@ public class App {
             CompilationUnit cu = JavaParser.parse(file);
             // change the methods names and parameters
             changeMethods(cu);
+            
             // prints the changed compilation unit
             System.out.println(cu.toString());
             FileWriter fileWriter = new FileWriter(camArquivo);

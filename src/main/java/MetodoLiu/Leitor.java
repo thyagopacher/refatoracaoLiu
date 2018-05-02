@@ -19,9 +19,12 @@ import java.util.stream.Collectors;
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
+
 import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.TypeDeclaration;
+import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import java.lang.reflect.Parameter;
 import org.apache.bcel.Repository;
@@ -42,9 +45,13 @@ public class Leitor {
 	private String nomeClasse;
 	private Class<?> caller;
 	private JavaClass classeInstanciada = null;
+	private CompilationUnit cu = null;
+	private ClassOrInterfaceDeclaration classeJavaParser;
 	private String tipoClasse;
 	private String caminhoClasse;
 	private File arquivoClasse;
+	public boolean erro = false;
+
 	public Leitor(){
 		
 	}
@@ -85,7 +92,8 @@ public class Leitor {
 			this.nomeClasse = nomeClasse;
 			this.carregaClasseOutraURL(caminho);
 		} catch (Exception ex) {
-			throw new IllegalStateException("Erro causado por: " + ex.getMessage() + " no caminho: " + caminho);
+			this.erro = true;
+			System.out.println("Erro causado por: " + ex.getMessage() + " no caminho: " + caminho);
 		}
 	}
 
@@ -177,6 +185,30 @@ public class Leitor {
 		}
 	}
 
+	public List<MethodDeclaration> metodosDeclaradosJavaParser() {
+		List<MethodDeclaration> metodos = new ArrayList<>();
+		try {
+			this.arquivoClasse = new File(this.caminhoClasse);
+			cu = JavaParser.parse(arquivoClasse);
+			// Go through all the types in the file
+			NodeList<TypeDeclaration<?>> types = cu.getTypes();
+			this.setClasseJavaParser((ClassOrInterfaceDeclaration) types.get(0));
+			for (TypeDeclaration<?> type : types) {
+				// Go through all fields, methods, etc. in this type
+				NodeList<BodyDeclaration<?>> members = type.getMembers();
+				for (BodyDeclaration<?> member : members) {
+					if (member instanceof MethodDeclaration) {
+						MethodDeclaration method = (MethodDeclaration) member;
+						metodos.add(method);
+					}
+				}
+			}
+		} catch (Exception ex) {
+			throw new IllegalStateException("Erro ao pegar linhas: " + ex.getMessage());
+		}
+		return metodos;
+	}	
+	
 	/** retorna os métodos da classe */
 	public Method[] metodosDeclarados() {
 		try {
@@ -186,6 +218,8 @@ public class Leitor {
 		}
 	}
 
+	
+	
 	public TypeVariable<?>[] parametros() {
 		try {
 			return caller.getTypeParameters();
@@ -368,13 +402,76 @@ public class Leitor {
 	 * @param condicional - condicional perante o IF
 	 * @return retorna o condicional cujo houver parametro sendo usado nele.
 	 */
-	public String temParametroNoIf(java.lang.reflect.Parameter[] parametrosMetodo, String condicional){
-		for (Parameter parametro : parametrosMetodo) {
-			if(condicional.contains(parametro.getName().toString())){
+	public IfStmt temParametroNoIf1(NodeList<com.github.javaparser.ast.body.Parameter> parametrosMetodo, IfStmt ifStmt){
+		for (com.github.javaparser.ast.body.Parameter parametro : parametrosMetodo) {
+			String condicao = ifStmt.getCondition().toString();
+			String thenIf = ifStmt.getThenStmt().toString();
+			if(!thenIf.contains("new ") && condicao.contains(parametro.getName().toString())){
 				/** achou um parametro sendo usado no condicional */
-				return condicional;
+				return ifStmt;
 			}
 		}
 		return null;		
 	}
+	
+	public IfStmt temParametroNoIf2(NodeList<com.github.javaparser.ast.body.Parameter> parametrosMetodo, IfStmt ifStmt){
+		for (com.github.javaparser.ast.body.Parameter parametro : parametrosMetodo) {
+			String condicao = ifStmt.getCondition().toString();
+			String thenIf = ifStmt.getThenStmt().toString();
+			if(thenIf.contains("new ") && condicao.contains(parametro.getName().toString())){
+				/** achou um parametro sendo usado no condicional */
+				return ifStmt;
+			}
+		}
+		return null;		
+	}	
+	
+	public JavaClass getClasseInstanciada() {
+		return classeInstanciada;
+	}
+
+	public void setClasseInstanciada(JavaClass classeInstanciada) {
+		this.classeInstanciada = classeInstanciada;
+	}
+
+	public CompilationUnit getCu() {
+		return cu;
+	}
+
+	public void setCu(CompilationUnit cu) {
+		this.cu = cu;
+	}
+
+	public ClassOrInterfaceDeclaration getClasseJavaParser() {
+		return classeJavaParser;
+	}
+
+	public void setClasseJavaParser(ClassOrInterfaceDeclaration classeJavaParser) {
+		this.classeJavaParser = classeJavaParser;
+	}	
+	
+	
+	public String getPacoteClasse() {
+		return pacoteClasse;
+	}
+
+	public void setPacoteClasse(String pacoteClasse) {
+		this.pacoteClasse = pacoteClasse;
+	}
+
+	public Class<?> getCaller() {
+		return caller;
+	}
+
+	public void setCaller(Class<?> caller) {
+		this.caller = caller;
+	}
+
+	public File getArquivoClasse() {
+		return arquivoClasse;
+	}
+
+	public void setArquivoClasse(File arquivoClasse) {
+		this.arquivoClasse = arquivoClasse;
+	}	
 }
